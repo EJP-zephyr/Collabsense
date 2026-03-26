@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CollabSense AI — DAO Creator Matchmaking</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #030712;
+    --bg2: #0a0f1e;
+    --surface: rgba(255,255,255,0.03);
+    --surface2: rgba(255,255,255,0.06);
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(99,255,200,0.2);
+    --cyan: #00ffc8;
+    --acid: #aaff00;
+    --violet: #8b5cf6;
+    --pink: #ff2d78;
+    --text: #f0f4ff;
+    --muted: rgba(240,244,255,0.45);
+    --card-glow: 0 0 40px rgba(0,255,200,0.08);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* CUSTOM CURSOR */
+  #cursor {
+    width: 12px; height: 12px;
+    background: var(--cyan);
+    border-radius: 50%;
+    position: fixed; top: 0; left: 0;
+    pointer-events: none; z-index: 9999;
+    transition: transform 0.15s ease, opacity 0.2s;
+    mix-blend-mode: screen;
+  }
+  #cursor-ring {
+    width: 36px; height: 36px;
+    border: 1px solid rgba(0,255,200,0.4);
+    border-radius: 50%;
+    position: fixed; top: 0; left: 0;
+    pointer-events: none; z-index: 9998;
+    transition: transform 0.35s cubic-bezier(.25,.46,.45,.94), opacity 0.2s;
+  }
+
+  /* CANVAS */
+  #canvas { position: fixed; inset: 0; z-index: 0; opacity: 0.55; }
+
+  /* LAYOUT */
+  .app { position: relative; z-index: 1; }
+
+  /* NAV */
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 40px;
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(20px);
+    background: rgba(3,7,18,0.7);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .nav-logo {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 1.2rem; font-weight: 800; letter-spacing: -0.02em;
+  }
+  .logo-dot {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--cyan), var(--acid));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; font-weight: 700; color: #000;
+  }
+  .nav-links { display: flex; align-items: center; gap: 32px; }
+  .nav-links a {
+    color: var(--muted); text-decoration: none; font-size: 0.85rem;
+    font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--cyan); }
+  .nav-cta {
+    background: var(--cyan); color: #000;
+    padding: 9px 22px; border-radius: 100px;
+    font-size: 0.85rem; font-weight: 700;
+    text-decoration: none; letter-spacing: 0.02em;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .nav-cta:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,255,200,0.35); }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 80px 24px;
+    position: relative;
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(0,255,200,0.08);
+    border: 1px solid rgba(0,255,200,0.2);
+    border-radius: 100px;
+    padding: 6px 16px;
+    font-size: 0.78rem; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--cyan);
+    margin-bottom: 32px;
+    animation: fadeUp 0.8s ease both;
+  }
+  .badge-pulse {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--cyan);
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(1.5)} }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+
+  .hero h1 {
+    font-size: clamp(2.8rem, 7vw, 6.5rem);
+    font-weight: 800;
+    line-height: 1.0;
+    letter-spacing: -0.04em;
+    max-width: 900px;
+    animation: fadeUp 0.8s 0.1s ease both;
+  }
+  .hero h1 em {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    background: linear-gradient(90deg, var(--cyan), var(--acid));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: clamp(0.85rem, 1.8vw, 1.05rem);
+    color: var(--muted);
+    max-width: 560px;
+    line-height: 1.7;
+    margin-top: 24px;
+    animation: fadeUp 0.8s 0.2s ease both;
+  }
+  .hero-actions {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 48px;
+    animation: fadeUp 0.8s 0.3s ease both;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--cyan), var(--acid));
+    color: #000; border: none; cursor: pointer;
+    padding: 14px 32px; border-radius: 100px;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.95rem; font-weight: 700;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .btn-primary:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 12px 40px rgba(0,255,200,0.4); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--text); border: 1px solid var(--border);
+    padding: 14px 32px; border-radius: 100px;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.95rem; font-weight: 600; cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .btn-ghost:hover { border-color: var(--cyan); color: var(--cyan); }
+
+  .hero-stats {
+    display: flex; gap: 48px; flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 72px;
+    animation: fadeUp 0.8s 0.4s ease both;
+  }
+  .stat { text-align: center; }
+  .stat-num {
+    font-size: 2.2rem; font-weight: 800; letter-spacing: -0.04em;
+    background: linear-gradient(135deg, #fff, var(--cyan));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .stat-label { font-size: 0.78rem; color: var(--muted); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; margin-top: 4px; }
+
+  /* SCROLL LINE */
+  .scroll-hint {
+    position: absolute; bottom: 40px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    color: var(--muted); font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
+    animation: fadeUp 1s 0.8s ease both;
+  }
+  .scroll-line { width: 1px; height: 40px; background: linear-gradient(var(--cyan), transparent); animation: scrollPulse 2s infinite; }
+  @keyframes scrollPulse { 0%,100%{opacity:0.3} 50%{opacity:1} }
+
+  /* SECTIONS */
+  section { padding: 100px 40px; max-width: 1200px; margin: 0 auto; }
+
+  .section-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--cyan); margin-bottom: 16px;
+  }
+  h2 {
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    font-weight: 800; letter-spacing: -0.03em;
+    line-height: 1.1;
+  }
+  h2 span { font-family: 'Instrument Serif', serif; font-style: italic; }
+
+  /* HOW IT WORKS */
+  .how-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 24px; margin-top: 56px;
+  }
+  .how-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+    position: relative; overflow: hidden;
+    transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
+  }
+  .how-card:hover {
+    border-color: var(--border2);
+    transform: translateY(-6px);
+    box-shadow: var(--card-glow);
+  }
+  .how-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    opacity: 0; transition: opacity 0.3s;
+  }
+  .how-card:hover::before { opacity: 1; }
+  .how-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem; color: var(--cyan); letter-spacing: 0.1em;
+    margin-bottom: 20px;
+  }
+  .how-icon {
+    width: 48px; height: 48px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; margin-bottom: 20px;
+  }
+  .how-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 12px; }
+  .how-card p { font-size: 0.88rem; color: var(--muted); line-height: 1.7; }
+
+  /* MATCHMAKING DEMO */
+  .match-demo {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 28px;
+    padding: 48px;
+    margin-top: 56px;
+    position: relative; overflow: hidden;
+  }
+  .match-demo::before {
+    content: '';
+    position: absolute;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(0,255,200,0.06) 0%, transparent 70%);
+    top: -100px; right: -100px;
+    border-radius: 50%;
+  }
+  .match-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 36px; flex-wrap: wrap; gap: 16px;
+  }
+  .match-header h3 { font-size: 1.3rem; font-weight: 700; }
+  .live-badge {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(170,255,0,0.1); border: 1px solid rgba(170,255,0,0.25);
+    border-radius: 100px; padding: 5px 14px;
+    font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--acid);
+  }
+  .live-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--acid); animation: pulse 1s infinite; }
+
+  .creator-input-row {
+    display: grid; grid-template-columns: 1fr auto; gap: 12px;
+    margin-bottom: 32px;
+  }
+  .input-field {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 20px;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+  .input-field:focus { border-color: var(--cyan); }
+  .input-field::placeholder { color: var(--muted); }
+  .analyze-btn {
+    background: linear-gradient(135deg, var(--cyan), var(--acid));
+    color: #000; border: none; cursor: pointer;
+    padding: 14px 28px; border-radius: 14px;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.9rem; font-weight: 700; white-space: nowrap;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .analyze-btn:hover { transform: scale(1.03); box-shadow: 0 8px 30px rgba(0,255,200,0.35); }
+
+  .tags-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 28px; }
+  .tag {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 6px 14px;
+    font-size: 0.78rem; font-weight: 600; cursor: pointer;
+    transition: all 0.2s; color: var(--muted);
+  }
+  .tag.active, .tag:hover { background: rgba(0,255,200,0.1); border-color: var(--border2); color: var(--cyan); }
+
+  /* MATCH RESULTS */
+  .matches-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 16px;
+  }
+  .match-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 24px;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative; overflow: hidden;
+  }
+  .match-card:hover {
+    border-color: var(--border2);
+    transform: translateY(-4px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 30px rgba(0,255,200,0.06);
+  }
+  .match-card.top-pick { border-color: rgba(0,255,200,0.3); }
+  .match-card.top-pick::after {
+    content: '⭐ Top Pick';
+    position: absolute; top: 12px; right: 12px;
+    background: rgba(0,255,200,0.15);
+    border: 1px solid rgba(0,255,200,0.3);
+    color: var(--cyan);
+    font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em;
+    padding: 3px 10px; border-radius: 100px;
+  }
+  .creator-avatar {
+    width: 52px; height: 52px; border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; margin-bottom: 14px;
+    position: relative;
+  }
+  .creator-avatar .online {
+    position: absolute; bottom: 2px; right: 2px;
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--acid); border: 2px solid var(--bg);
+  }
+  .creator-name { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+  .creator-role { font-size: 0.78rem; color: var(--muted); margin-bottom: 16px; font-family: 'DM Mono', monospace; }
+  .match-score {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 14px;
+  }
+  .score-bar {
+    flex: 1; height: 4px; background: rgba(255,255,255,0.06);
+    border-radius: 100px; overflow: hidden;
+  }
+  .score-fill {
+    height: 100%;
+    border-radius: 100px;
+    background: linear-gradient(90deg, var(--cyan), var(--acid));
+    transition: width 1s cubic-bezier(.25,.46,.45,.94);
+  }
+  .score-pct { font-size: 0.78rem; font-weight: 700; color: var(--cyan); font-family: 'DM Mono', monospace; }
+  .creator-tags-mini { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tag-mini {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 3px 10px;
+    font-size: 0.68rem; color: var(--muted); font-weight: 600;
+  }
+  .reach-row {
+    display: flex; align-items: center; gap: 6px;
+    margin-top: 14px; padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+  .reach-val { font-size: 0.8rem; color: var(--text); font-weight: 600; }
+  .reach-lbl { font-size: 0.72rem; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+  /* FEATURES */
+  .features-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 2px; margin-top: 56px;
+    border-radius: 24px; overflow: hidden;
+  }
+  .feat-cell {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 40px;
+    transition: background 0.3s;
+    position: relative; overflow: hidden;
+  }
+  .feat-cell:hover { background: var(--surface2); }
+  .feat-cell.wide { grid-column: 1 / -1; }
+  .feat-icon { font-size: 2rem; margin-bottom: 20px; }
+  .feat-cell h3 { font-size: 1.2rem; font-weight: 700; margin-bottom: 12px; }
+  .feat-cell p { font-size: 0.88rem; color: var(--muted); line-height: 1.7; }
+  .feat-glow {
+    position: absolute;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    pointer-events: none;
+    opacity: 0; transition: opacity 0.4s;
+    background: radial-gradient(circle, rgba(0,255,200,0.08), transparent 70%);
+  }
+  .feat-cell:hover .feat-glow { opacity: 1; }
+
+  /* PROFILE BUILDER */
+  .profile-section {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 28px;
+    padding: 48px;
+    margin-top: 56px;
+  }
+  .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 32px; }
+  .field-group { display: flex; flex-direction: column; gap: 8px; }
+  .field-label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .field-input {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 0.9rem; outline: none;
+    transition: border-color 0.2s;
+  }
+  .field-input:focus { border-color: var(--cyan); }
+  .field-select {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 0.9rem; outline: none;
+    appearance: none; cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .field-select:focus { border-color: var(--cyan); }
+  .field-select option { background: #0a0f1e; }
+  .skills-picker { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .skill-chip {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 100px; padding: 7px 16px;
+    font-size: 0.8rem; font-weight: 600; cursor: pointer;
+    transition: all 0.2s; color: var(--muted);
+  }
+  .skill-chip.sel { background: rgba(0,255,200,0.12); border-color: rgba(0,255,200,0.4); color: var(--cyan); }
+  .submit-profile {
+    margin-top: 28px; width: 100%;
+    background: linear-gradient(135deg, var(--cyan), var(--acid));
+    color: #000; border: none; cursor: pointer;
+    padding: 16px; border-radius: 14px;
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem; font-weight: 700;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .submit-profile:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(0,255,200,0.35); }
+
+  /* NOTIFICATION */
+  .notif {
+    position: fixed; bottom: 28px; right: 28px; z-index: 1000;
+    background: rgba(0,255,200,0.12);
+    border: 1px solid rgba(0,255,200,0.3);
+    border-radius: 16px;
+    padding: 16px 22px;
+    font-size: 0.88rem; font-weight: 600;
+    color: var(--cyan);
+    backdrop-filter: blur(20px);
+    transform: translateY(80px); opacity: 0;
+    transition: all 0.4s cubic-bezier(.25,.46,.45,.94);
+    max-width: 320px;
+  }
+  .notif.show { transform: translateY(0); opacity: 1; }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 60px 40px;
+    display: grid; grid-template-columns: 1fr auto;
+    gap: 40px; align-items: center;
+    max-width: 100%;
+  }
+  .foot-brand { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.02em; }
+  .foot-brand span { color: var(--cyan); }
+  .foot-copy { font-size: 0.78rem; color: var(--muted); margin-top: 8px; font-family: 'DM Mono', monospace; }
+  .foot-links { display: flex; gap: 28px; flex-wrap: wrap; }
+  .foot-links a { color: var(--muted); text-decoration: none; font-size: 0.82rem; font-weight: 600; transition: color 0.2s; }
+  .foot-links a:hover { color: var(--cyan); }
+
+  /* LOADING */
+  .loading {
+    display: flex; align-items: center; justify-content: center;
+    gap: 12px; padding: 48px;
+    color: var(--muted); font-family: 'DM Mono', monospace; font-size: 0.85rem;
+  }
+  .spinner {
+    width: 20px; height: 20px; border-radius: 50%;
+    border: 2px solid rgba(0,255,200,0.2);
+    border-top-color: var(--cyan);
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 500;
+    background: rgba(3,7,18,0.85); backdrop-filter: blur(12px);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--bg2); border: 1px solid var(--border2);
+    border-radius: 24px; padding: 40px;
+    max-width: 520px; width: 90%;
+    transform: scale(0.95); transition: transform 0.3s;
+    max-height: 80vh; overflow-y: auto;
+  }
+  .modal-overlay.open .modal { transform: scale(1); }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .modal-close {
+    background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+    border-radius: 100px; width: 32px; height: 32px;
+    cursor: pointer; color: var(--muted); font-size: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+  }
+  .modal-close:hover { background: rgba(255,45,120,0.15); color: var(--pink); }
+  .modal-stat { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .modal-stat:last-child { border-bottom: none; }
+  .modal-stat-lbl { font-size: 0.82rem; color: var(--muted); }
+  .modal-stat-val { font-size: 0.88rem; font-weight: 700; }
+  .connect-btn {
+    width: 100%; margin-top: 24px;
+    background: linear-gradient(135deg, var(--cyan), var(--acid));
+    color: #000; border: none; cursor: pointer;
+    padding: 14px; border-radius: 12px;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.95rem; font-weight: 700;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .connect-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,255,200,0.35); }
+
+  /* MOBILE */
+  @media (max-width: 768px) {
+    nav { padding: 16px 20px; }
+    .nav-links { display: none; }
+    section { padding: 60px 20px; }
+    .features-grid { grid-template-columns: 1fr; }
+    .feat-cell.wide { grid-column: 1; }
+    .profile-grid { grid-template-columns: 1fr; }
+    .match-demo { padding: 28px 20px; }
+    .creator-input-row { grid-template-columns: 1fr; }
+    footer { grid-template-columns: 1fr; padding: 40px 20px; }
+    .hero { padding: 60px 20px 80px; }
+    .hero-stats { gap: 28px; }
+    body { cursor: auto; }
+    #cursor, #cursor-ring { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div id="cursor"></div>
+<div id="cursor-ring"></div>
+<canvas id="canvas"></canvas>
+
+<div class="app">
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <div class="logo-dot">CS</div>
+    CollabSense
+  </div>
+  <div class="nav-links">
+    <a href="#how">How It Works</a>
+    <a href="#match">Matchmaker</a>
+    <a href="#features">Features</a>
+    <a href="#profile">Join DAO</a>
+  </div>
+  <a href="#profile" class="nav-cta">Get Started</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">
+    <span class="badge-pulse"></span>
+    AI-Powered DAO Collaboration
+  </div>
+  <h1>Find your perfect<br/><em>co-creator</em><br/>inside any DAO</h1>
+  <p class="hero-sub">
+    CollabSense AI analyzes your creative DNA — past work, audience reach, engagement patterns — and matches you with the ideal collaborator to amplify impact.
+  </p>
+  <div class="hero-actions">
+    <button class="btn-primary" onclick="document.getElementById('match').scrollIntoView({behavior:'smooth'})">Find My Match →</button>
+    <button class="btn-ghost" onclick="document.getElementById('how').scrollIntoView({behavior:'smooth'})">See How It Works</button>
+  </div>
+  <div class="hero-stats">
+    <div class="stat">
+      <div class="stat-num" id="s1">0</div>
+      <div class="stat-label">Active Creators</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" id="s2">0</div>
+      <div class="stat-label">DAOs Connected</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" id="s3">0%</div>
+      <div class="stat-label">Match Accuracy</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num" id="s4">$0M</div>
+      <div class="stat-label">Collab Value</div>
+    </div>
+  </div>
+  <div class="scroll-hint">
+    <span>Scroll</span>
+    <div class="scroll-line"></div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="section-tag">// How It Works</div>
+  <h2>From profile to perfect<br/><span>match</span> in minutes</h2>
+  <div class="how-grid">
+    <div class="how-card">
+      <div class="how-num">01 — PROFILE</div>
+      <div class="how-icon" style="background:rgba(0,255,200,0.1)">🎨</div>
+      <h3>Build Your Creator Profile</h3>
+      <p>Detail your past projects, audience demographics, social reach, and engagement metrics. The richer your profile, the smarter the match.</p>
+    </div>
+    <div class="how-card">
+      <div class="how-num">02 — ANALYZE</div>
+      <div class="how-icon" style="background:rgba(170,255,0,0.1)">🧠</div>
+      <h3>AI Pattern Recognition</h3>
+      <p>Our ML models scan thousands of collaboration histories, identifying what makes creator pairings succeed — style synergy, audience overlap, and engagement compatibility.</p>
+    </div>
+    <div class="how-card">
+      <div class="how-num">03 — MATCH</div>
+      <div class="how-icon" style="background:rgba(139,92,246,0.1)">⚡</div>
+      <h3>Ranked Collaborator List</h3>
+      <p>Get a curated, scored list of ideal partners within your DAO — ranked by compatibility score, shared vision, and predicted impact potential.</p>
+    </div>
+    <div class="how-card">
+      <div class="how-num">04 — CREATE</div>
+      <div class="how-icon" style="background:rgba(255,45,120,0.1)">🚀</div>
+      <h3>Collaborate & Amplify</h3>
+      <p>Connect, co-create, and track the impact of your collaboration. CollabSense learns from every pairing to make future matches even smarter.</p>
+    </div>
+  </div>
+</section>
+
+<!-- MATCHMAKER -->
+<section id="match" style="max-width:1200px">
+  <div class="section-tag">// Live Matchmaker</div>
+  <h2>Discover your ideal<br/><span>collaborator</span> now</h2>
+
+  <div class="match-demo">
+    <div class="match-header">
+      <h3>AI Collaboration Engine</h3>
+      <div class="live-badge"><div class="live-dot"></div>Live Matching</div>
+    </div>
+
+    <div class="creator-input-row">
+      <input class="input-field" id="creatorInput" placeholder="Describe your creative focus, style or DAO role…" />
+      <button class="analyze-btn" onclick="runMatch()">⚡ Match Me</button>
+    </div>
+
+    <div style="margin-bottom:16px;font-size:0.78rem;color:var(--muted);font-family:'DM Mono',monospace">Filter by niche:</div>
+    <div class="tags-row" id="tagRow">
+      <span class="tag active" onclick="toggleTag(this)">All</span>
+      <span class="tag" onclick="toggleTag(this)">Visual Art</span>
+      <span class="tag" onclick="toggleTag(this)">Music</span>
+      <span class="tag" onclick="toggleTag(this)">Web3</span>
+      <span class="tag" onclick="toggleTag(this)">Writing</span>
+      <span class="tag" onclick="toggleTag(this)">Video</span>
+      <span class="tag" onclick="toggleTag(this)">Dev</span>
+      <span class="tag" onclick="toggleTag(this)">Community</span>
+    </div>
+
+    <div id="matchResults">
+      <div class="matches-grid" id="matchGrid"></div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-tag">// Platform Intelligence</div>
+  <h2>Built for the<br/><span>creator economy</span></h2>
+
+  <div class="features-grid">
+    <div class="feat-cell">
+      <div class="feat-glow" style="top:-50px;left:-50px"></div>
+      <div class="feat-icon">🔮</div>
+      <h3>Predictive Compatibility Score</h3>
+      <p>Our model cross-references creative style vectors, audience demographic overlap, and historical engagement data to generate a nuanced compatibility score — not just keyword matching.</p>
+    </div>
+    <div class="feat-cell">
+      <div class="feat-glow" style="bottom:-50px;right:-50px"></div>
+      <div class="feat-icon">📡</div>
+      <h3>Real-Time Audience Overlap Analysis</h3>
+      <p>See exactly how your audiences intersect. Understand the potential combined reach before committing to a collab — reducing risk, maximizing amplification.</p>
+    </div>
+    <div class="feat-cell wide">
+      <div class="feat-glow" style="top:50%;left:50%;transform:translate(-50%,-50%)"></div>
+      <div class="feat-icon">🌐</div>
+      <h3>DAO-Native Collaboration Graph</h3>
+      <p>CollabSense maps the entire collaboration history of your DAO — who worked with whom, which pairings generated the most engagement, which projects received funding. This graph powers smarter, warmer introductions between creators who are truly aligned.</p>
+    </div>
+    <div class="feat-cell">
+      <div class="feat-icon">⚙️</div>
+      <h3>On-Chain Verified Portfolios</h3>
+      <p>Connect your wallet to pull verified on-chain creative history — NFT mints, DAO votes, funding receipts — adding a trust layer beyond self-reported claims.</p>
+    </div>
+    <div class="feat-cell">
+      <div class="feat-icon">📈</div>
+      <h3>Collaboration Impact Tracker</h3>
+      <p>After pairing up, track the measurable impact of your collaboration in real-time: reach growth, engagement lift, funding unlocked. The AI learns from every outcome.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PROFILE BUILDER -->
+<section id="profile">
+  <div class="section-tag">// Join the Network</div>
+  <h2>Build your<br/><span>creator profile</span></h2>
+
+  <div class="profile-section">
+    <div style="font-size:0.88rem;color:var(--muted);max-width:500px;line-height:1.7">
+      Your profile is your creative fingerprint. The more detail you share, the more precisely CollabSense can identify your ideal collaborators within the DAO.
+    </div>
+
+    <div class="profile-grid">
+      <div class="field-group">
+        <div class="field-label">Display Name</div>
+        <input class="field-input" placeholder="e.g. 0xArtist_Nova" id="pName"/>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Primary Role</div>
+        <select class="field-select" id="pRole">
+          <option value="">Select your role</option>
+          <option>Visual Artist</option>
+          <option>Music Producer</option>
+          <option>Writer / Poet</option>
+          <option>Developer</option>
+          <option>Community Manager</option>
+          <option>Video Creator</option>
+          <option>Curator</option>
+          <option>Tokenomics Designer</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Monthly Audience Reach</div>
+        <input class="field-input" placeholder="e.g. 24,000" id="pReach"/>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Avg Engagement Rate</div>
+        <input class="field-input" placeholder="e.g. 6.2%" id="pEng"/>
+      </div>
+      <div class="field-group" style="grid-column:1/-1">
+        <div class="field-label">Creative Bio</div>
+        <textarea class="field-input" rows="3" placeholder="Describe your style, past projects, and what kind of collaborations you're seeking…" id="pBio" style="resize:vertical"></textarea>
+      </div>
+    </div>
+
+    <div style="margin-top:24px">
+      <div class="field-label" style="margin-bottom:12px">Skills & Interests</div>
+      <div class="skills-picker" id="skillsPicker">
+        <span class="skill-chip" onclick="toggleSkill(this)">🎨 Visual Art</span>
+        <span class="skill-chip" onclick="toggleSkill(this)">🎵 Music</span>
+        <span class="skill-chip" onclick="toggleSkill(this)">✍️ Writing</span>
+        <span class="skill-chip" onclick="toggleSkill(this)">💻 Code</span>
+        <span class="skill-chip" onclick="toggleSkill(this)">📸 Photography</span>
+        <span class="skill-chip" onclick="toggleSkill(this)">🎬 Video</span>
+        <span class="skill-chip" onclick="toggleSkill(this)">🔗 Web3</span>
+        <span class="skill-chip" onclick="toggleSkill(this)">🌍 Community</span>
+        <span class="skill-chip" onclick="toggleSkill(this)">📊 Analytics</span>
+        <span class="skill-chip" onclick="toggleSkill(this)">🎮 Gaming</span>
+        <span class="skill-chip" onclick="toggleSkill(this)">🎭 Storytelling</span>
+        <span class="skill-chip" onclick="toggleSkill(this)">🏗️ Architecture</span>
+      </div>
+    </div>
+
+    <button class="submit-profile" onclick="submitProfile()">
+      ⚡ Activate My Profile & Start Matching
+    </button>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div>
+    <div class="foot-brand">Collab<span>Sense</span> AI</div>
+    <div class="foot-copy">© 2025 CollabSense — Built for the decentralized creative future</div>
+  </div>
+  <div class="foot-links">
+    <a href="#">Docs</a>
+    <a href="#">DAO Portal</a>
+    <a href="#">Privacy</a>
+    <a href="#">Contact</a>
+  </div>
+</footer>
+
+</div><!-- /app -->
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal" onclick="closeModal(event)">
+  <div class="modal" id="modalContent">
+    <div class="modal-header">
+      <h3 id="modalName">Creator Details</h3>
+      <button class="modal-close" onclick="document.getElementById('modal').classList.remove('open')">✕</button>
+    </div>
+    <div id="modalBody"></div>
+    <button class="connect-btn" onclick="sendConnect()">🤝 Send Collab Request</button>
+  </div>
+</div>
+
+<!-- NOTIFICATION -->
+<div class="notif" id="notif"></div>
+
+<script>
+// ==========================================
+// PARTICLE CANVAS
+// ==========================================
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+let W, H, particles = [], connections = [];
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+class Particle {
+  constructor() { this.reset(); }
+  reset() {
+    this.x = Math.random() * W;
+    this.y = Math.random() * H;
+    this.vx = (Math.random() - 0.5) * 0.3;
+    this.vy = (Math.random() - 0.5) * 0.3;
+    this.r = Math.random() * 1.5 + 0.5;
+    this.alpha = Math.random() * 0.5 + 0.1;
+    this.color = Math.random() > 0.5 ? '#00ffc8' : '#aaff00';
+  }
+  update() {
+    this.x += this.vx; this.y += this.vy;
+    if (this.x < 0 || this.x > W || this.y < 0 || this.y > H) this.reset();
+  }
+  draw() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+    ctx.fillStyle = this.color;
+    ctx.globalAlpha = this.alpha;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+for (let i = 0; i < 90; i++) particles.push(new Particle());
+
+function animateCanvas() {
+  ctx.clearRect(0, 0, W, H);
+  particles.forEach(p => { p.update(); p.draw(); });
+  // Draw connections
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 120) {
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.strokeStyle = '#00ffc8';
+        ctx.globalAlpha = (1 - dist / 120) * 0.08;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+  requestAnimationFrame(animateCanvas);
+}
+animateCanvas();
+
+// ==========================================
+// CURSOR
+// ==========================================
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursor-ring');
+let mx = 0, my = 0, rx = 0, ry = 0;
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cursor.style.transform = `translate(${mx - 6}px, ${my - 6}px)`;
+});
+function animCursor() {
+  rx += (mx - rx) * 0.12; ry += (my - ry) * 0.12;
+  ring.style.transform = `translate(${rx - 18}px, ${ry - 18}px)`;
+  requestAnimationFrame(animCursor);
+}
+animCursor();
+
+// ==========================================
+// COUNTER ANIMATION
+// ==========================================
+function animCount(el, target, suffix, duration) {
+  let start = 0; const step = target / (duration / 16);
+  const timer = setInterval(() => {
+    start += step;
+    if (start >= target) { start = target; clearInterval(timer); }
+    el.textContent = Math.floor(start).toLocaleString() + suffix;
+  }, 16);
+}
+setTimeout(() => {
+  animCount(document.getElementById('s1'), 12480, '', 1800);
+  animCount(document.getElementById('s2'), 342, '', 1600);
+  document.getElementById('s3').textContent = '0%';
+  let acc = 0;
+  const t = setInterval(() => {
+    acc += 0.5;
+    if (acc >= 94.7) { acc = 94.7; clearInterval(t); }
+    document.getElementById('s3').textContent = acc.toFixed(1) + '%';
+  }, 25);
+  animCount(document.getElementById('s4'), 8, 'M', 1600);
+  setTimeout(() => { document.getElementById('s4').textContent = '$8.2M'; }, 1700);
+}, 300);
+
+// ==========================================
+// MATCHMAKER DATA
+// ==========================================
+const CREATORS = [
+  { name: 'Nova_Kessler', emoji: '🎨', role: 'Visual Artist', score: 97, reach: '89K', eng: '8.4%', tags: ['Visual Art', 'Web3', 'NFT'], top: true, bio: 'Digital surrealist with a focus on generative art and DAO governance visuals. 3 years in Web3 creative space.', projects: 14, funded: '$42K', dao: 'ArtHaus DAO' },
+  { name: 'Zuri_Beats', emoji: '🎵', role: 'Music Producer', score: 91, reach: '124K', eng: '6.1%', tags: ['Music', 'Community', 'Video'], top: true, bio: 'Afrofuturist producer blending traditional rhythms with electronic soundscapes. 2M+ streams across platforms.', projects: 22, funded: '$18K', dao: 'SoundDAO' },
+  { name: 'CodexWren', emoji: '💻', role: 'Developer', score: 88, reach: '31K', eng: '11.2%', tags: ['Dev', 'Web3', 'Community'], top: false, bio: 'Solidity dev building creator tooling. Previously built 3 successful DAO toolkits used by 40+ communities.', projects: 9, funded: '$67K', dao: 'BuilderDAO' },
+  { name: 'Lyra_Moons', emoji: '✍️', role: 'Writer & Poet', score: 85, reach: '56K', eng: '9.7%', tags: ['Writing', 'Storytelling', 'Community'], top: false, bio: 'Speculative fiction writer exploring the intersection of crypto, identity, and digital mythology.', projects: 31, funded: '$12K', dao: 'WordDAO' },
+  { name: 'PixelDrift', emoji: '🎬', role: 'Video Creator', score: 82, reach: '208K', eng: '4.9%', tags: ['Video', 'Visual Art', 'Web3'], top: false, bio: 'Documentary-style video essays on creator economies, DAO culture, and the future of digital ownership.', projects: 17, funded: '$29K', dao: 'LensDAO' },
+  { name: 'Sol_Arch', emoji: '🏗️', role: 'Tokenomics Designer', score: 79, reach: '18K', eng: '14.1%', tags: ['Web3', 'Analytics', 'Community'], top: false, bio: 'Former DeFi protocol economist, now designing creator token models for sustainable DAO economies.', projects: 6, funded: '$91K', dao: 'EconDAO' },
+];
+
+let currentModal = null;
+
+function renderMatches(data) {
+  const grid = document.getElementById('matchGrid');
+  grid.innerHTML = '';
+  data.forEach((c, i) => {
+    const card = document.createElement('div');
+    card.className = 'match-card' + (c.top ? ' top-pick' : '');
+    card.style.animationDelay = i * 0.08 + 's';
+    card.innerHTML = `
+      <div class="creator-avatar" style="background:rgba(0,255,200,0.08)">
+        ${c.emoji}<div class="online"></div>
+      </div>
+      <div class="creator-name">${c.name}</div>
+      <div class="creator-role">${c.role}</div>
+      <div class="match-score">
+        <div class="score-bar"><div class="score-fill" style="width:0%" data-w="${c.score}%"></div></div>
+        <div class="score-pct">${c.score}%</div>
+      </div>
+      <div class="creator-tags-mini">
+        ${c.tags.map(t => `<span class="tag-mini">${t}</span>`).join('')}
+      </div>
+      <div class="reach-row">
+        <span class="reach-val">${c.reach}</span>
+        <span class="reach-lbl">reach · ${c.eng} eng</span>
+      </div>
+    `;
+    card.addEventListener('click', () => openModal(c));
+    grid.appendChild(card);
+  });
+  // Animate score bars
+  setTimeout(() => {
+    document.querySelectorAll('.score-fill').forEach(el => {
+      el.style.width = el.dataset.w;
+    });
+  }, 100);
+}
+
+function runMatch() {
+  const grid = document.getElementById('matchGrid');
+  grid.innerHTML = '<div class="loading"><div class="spinner"></div>Analyzing creator graph…</div>';
+  setTimeout(() => {
+    const shuffled = [...CREATORS].sort((a,b) => b.score - a.score);
+    renderMatches(shuffled);
+    showNotif('⚡ Found 6 ideal matches based on your profile!');
+  }, 1600);
+}
+
+function toggleTag(el) {
+  document.querySelectorAll('#tagRow .tag').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// Initial render
+renderMatches(CREATORS);
+
+// ==========================================
+// MODAL
+// ==========================================
+function openModal(creator) {
+  currentModal = creator;
+  document.getElementById('modalName').textContent = creator.name;
+  document.getElementById('modalBody').innerHTML = `
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px">
+      <div style="font-size:2.5rem;background:rgba(0,255,200,0.08);width:64px;height:64px;border-radius:18px;display:flex;align-items:center;justify-content:center">${creator.emoji}</div>
+      <div>
+        <div style="font-size:0.85rem;color:var(--muted);font-family:'DM Mono',monospace">${creator.role}</div>
+        <div style="font-size:0.8rem;color:var(--cyan);margin-top:4px">${creator.dao}</div>
+      </div>
+    </div>
+    <div style="font-size:0.86rem;color:var(--muted);line-height:1.7;margin-bottom:24px">${creator.bio}</div>
+    <div class="modal-stat"><span class="modal-stat-lbl">Compatibility Score</span><span class="modal-stat-val" style="color:var(--cyan)">${creator.score}%</span></div>
+    <div class="modal-stat"><span class="modal-stat-lbl">Audience Reach</span><span class="modal-stat-val">${creator.reach}</span></div>
+    <div class="modal-stat"><span class="modal-stat-lbl">Engagement Rate</span><span class="modal-stat-val">${creator.eng}</span></div>
+    <div class="modal-stat"><span class="modal-stat-lbl">Projects Completed</span><span class="modal-stat-val">${creator.projects}</span></div>
+    <div class="modal-stat"><span class="modal-stat-lbl">Total Funding Received</span><span class="modal-stat-val" style="color:var(--acid)">${creator.funded}</span></div>
+    <div class="modal-stat"><span class="modal-stat-lbl">Skills</span><span class="modal-stat-val" style="font-size:0.78rem">${creator.tags.join(' · ')}</span></div>
+  `;
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('modal')) {
+    document.getElementById('modal').classList.remove('open');
+  }
+}
+
+function sendConnect() {
+  document.getElementById('modal').classList.remove('open');
+  showNotif(`🤝 Collab request sent to ${currentModal?.name || 'creator'}!`);
+}
+
+// ==========================================
+// PROFILE BUILDER
+// ==========================================
+function toggleSkill(el) { el.classList.toggle('sel'); }
+
+function submitProfile() {
+  const name = document.getElementById('pName').value.trim();
+  const role = document.getElementById('pRole').value;
+  if (!name || !role) {
+    showNotif('⚠️ Please fill in your name and role first!');
+    return;
+  }
+  showNotif(`🚀 Profile activated! Welcome to the DAO, ${name}. Your matches are being computed…`);
+  setTimeout(() => {
+    document.getElementById('match').scrollIntoView({ behavior: 'smooth' });
+    runMatch();
+  }, 2000);
+}
+
+// ==========================================
+// NOTIFICATION
+// ==========================================
+let notifTimer;
+function showNotif(msg) {
+  const el = document.getElementById('notif');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(notifTimer);
+  notifTimer = setTimeout(() => el.classList.remove('show'), 4000);
+}
+
+// ==========================================
+// FEATURE GLOW FOLLOW MOUSE
+// ==========================================
+document.querySelectorAll('.feat-cell').forEach(cell => {
+  cell.addEventListener('mousemove', e => {
+    const rect = cell.getBoundingClientRect();
+    const glow = cell.querySelector('.feat-glow');
+    if (glow) {
+      glow.style.left = (e.clientX - rect.left - 100) + 'px';
+      glow.style.top = (e.clientY - rect.top - 100) + 'px';
+    }
+  });
+});
+</script>
+</body>
+</html>
